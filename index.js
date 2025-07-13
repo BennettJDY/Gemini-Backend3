@@ -62,3 +62,38 @@ app.post('/v1/chat/completions', async (req, res) => {
 app.listen(port, () => {
   console.log(`Proxy server running on port ${port}`);
 });
+app.post('/meals', async (req, res) => {
+  const { people = 2, preferences = 'general' } = req.body;
+
+  const geminiRequest = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: `Suggest 5 meal ideas for ${people} people who prefer ${preferences}. Respond in a short bullet list.`
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    const geminiRes = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + process.env.GEMINI_API_KEY,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geminiRequest)
+      }
+    );
+
+    const geminiData = await geminiRes.json();
+    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'No meals found.';
+
+    res.json({ meals: reply });
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    res.status(500).json({ error: 'Error fetching meals from Gemini' });
+  }
+});
